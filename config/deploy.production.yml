@@ -1,0 +1,103 @@
+# Rails 8 Weather App - AWS EC2 Production Deployment Configuration
+# This file demonstrates Kamal deployment to AWS EC2 using best practices
+
+# Name of your application. Used to uniquely configure containers.
+service: weather-app
+
+# Name of the container image - UPDATE WITH YOUR DOCKER HUB USERNAME
+image: YOUR_DOCKERHUB_USERNAME/weather-app
+
+# Deploy to these servers - UPDATE WITH YOUR EC2 ELASTIC IP
+servers:
+  web:
+    - YOUR_EC2_ELASTIC_IP
+    # Example: - 54.123.456.789
+
+# Enable SSL auto certification via Let's Encrypt
+# UPDATE WITH YOUR DOMAIN OR SUBDOMAIN
+proxy:
+  ssl: true
+  host: YOUR_DOMAIN.com
+  # Example: weather-demo.yourdomain.com
+  # For testing without domain, you can temporarily disable SSL:
+  # ssl: false
+
+# Credentials for your image host (Docker Hub)
+registry:
+  # Using Docker Hub (free tier)
+  username: YOUR_DOCKERHUB_USERNAME
+  
+  # Always use an access token rather than real password
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+# Environment variables for the application
+env:
+  # Secret variables (stored in .kamal/secrets)
+  secret:
+    - RAILS_MASTER_KEY
+    - WEATHER_API_KEY  # Your WeatherAPI.com key
+  
+  # Clear text environment variables
+  clear:
+    # Enable Solid Queue in Puma for background jobs
+    SOLID_QUEUE_IN_PUMA: true
+    
+    # Production optimizations
+    WEB_CONCURRENCY: 1  # t2.micro has 1 vCPU
+    RAILS_MAX_THREADS: 5
+    RAILS_ENV: production
+    
+    # Logging
+    RAILS_LOG_LEVEL: info
+    RAILS_LOG_TO_STDOUT: true
+
+# Useful command aliases
+aliases:
+  console: app exec --interactive --reuse "bin/rails console"
+  shell: app exec --interactive --reuse "bash"
+  logs: app logs -f
+  dbc: app exec --interactive --reuse "bin/rails dbconsole"
+  restart: app restart
+  status: app details
+
+# Persistent storage for SQLite database and uploads
+volumes:
+  - "weather_storage:/rails/storage"
+  - "weather_db:/rails/db"
+
+# Asset bridging for zero-downtime deployments
+asset_path: /rails/public/assets
+
+# Docker image configuration
+builder:
+  arch: amd64
+  # Optimize for production
+  args:
+    RUBY_VERSION: 3.4.2
+
+# SSH configuration for EC2
+ssh:
+  user: ubuntu  # Default user for Ubuntu AMI
+
+# Health check configuration
+healthcheck:
+  path: /up
+  port: 3000
+  max_attempts: 7
+  interval: 20s
+
+# Traefik proxy configuration for AWS EC2
+traefik:
+  options:
+    publish:
+      - "443:443"
+      - "80:80"
+    volume:
+      - "/letsencrypt/acme.json:/letsencrypt/acme.json"
+  args:
+    entryPoints.web.address: ":80"
+    entryPoints.websecure.address: ":443"
+    certificatesResolvers.letsencrypt.acme.tlsChallenge: true
+    certificatesResolvers.letsencrypt.acme.email: "YOUR_EMAIL@example.com"
+    certificatesResolvers.letsencrypt.acme.storage: "/letsencrypt/acme.json"
