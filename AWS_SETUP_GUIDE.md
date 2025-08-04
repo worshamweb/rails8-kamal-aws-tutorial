@@ -125,6 +125,8 @@ aws ecr get-login-password --region YOUR_AWS_REGION | docker login --username AW
 ```
 *Note: Replace YOUR_ACCOUNT_ID with your actual AWS account ID and YOUR_AWS_REGION with your AWS region (e.g., us-east-1, us-west-2, eu-west-1). This login will be automated in Kamal configuration.*
 
+*You may see a warning about credentials stored unencrypted - this is normal for development. ECR tokens expire after 12 hours for security.*
+
 ### Option B: Docker Hub (Alternative)
 1. **Create account** at hub.docker.com
 2. **Create repository**: `your-username/rails-weather-app`
@@ -143,19 +145,17 @@ aws ecr get-login-password --region YOUR_AWS_REGION | docker login --username AW
 ```bash
 mkdir -p log storage
 touch log/.keep storage/.keep
-chmod +x bin/docker-entrypoint
-chmod +x bin/kamal
+chmod +x bin/docker-entrypoint bin/kamal bin/thrust bin/rails bin/rake bin/setup
 ```
 
 **What this does:**
 - Creates `log` and `storage` directories that Docker expects
 - Adds `.keep` files so Git tracks empty directories
-- Makes the Docker entrypoint script executable
-- Makes the Kamal executable script executable
+- Makes all Rails executable scripts executable (docker-entrypoint, kamal, thrust, rails, rake, setup)
 
 **Commit these changes:**
 ```bash
-git add log/.keep storage/.keep bin/docker-entrypoint bin/kamal
+git add log/.keep storage/.keep bin/
 git commit -m "Prepare app for Kamal deployment"
 ```
 
@@ -190,7 +190,6 @@ cp config/deploy.production.yml config/deploy.yml
 This tutorial's Kamal configuration includes several customizations beyond the default Rails 8 Kamal setup. If you're applying these techniques to a new Rails app, here are the key modifications:
 
 **AWS EC2 Optimizations:**
-- **Extended health check timeout** (`proxy.healthcheck.timeout: 60s`) - t2.micro instances need more time for Rails to boot
 - **Resource limits** (`WEB_CONCURRENCY: 1`, `RAILS_MAX_THREADS: 5`) - Optimized for t2.micro's single CPU
 - **SSH configuration** - Explicit SSH user and key path for Ubuntu AMI
 
@@ -514,12 +513,18 @@ image: YOUR_ACCOUNT_ID.dkr.ecr.YOUR_AWS_REGION.amazonaws.com/rails-weather-app
 aws ecr describe-repositories --repository-names rails-weather-app --region YOUR_AWS_REGION
 ```
 
-**For ECR - refresh login token:**
+**For ECR - refresh login token (tokens expire after 12 hours):**
 
 **Run on your local machine:**
 ```bash
 aws ecr get-login-password --region YOUR_AWS_REGION | docker login --username AWS --password-stdin YOUR_ACCOUNT_ID.dkr.ecr.YOUR_AWS_REGION.amazonaws.com
 ```
+
+**Update your secrets file with fresh token:**
+```bash
+aws ecr get-login-password --region YOUR_AWS_REGION
+```
+Copy the output and replace `KAMAL_REGISTRY_PASSWORD` in `.kamal/secrets`
 
 **For Docker Hub - verify login:**
 
