@@ -16,16 +16,9 @@ servers:
     # Example: - 54.123.456.789
 
 # Proxy configuration (SSL disabled - requires domain name)
-# Extended timeout for t2.micro instances (Rails can take longer to boot)
-proxy:
-  healthcheck:
-    timeout: 60
-# Uncomment for SSL:
 # proxy:
 #   ssl: true
 #   host: YOUR_DOMAIN.com
-#   healthcheck:
-#     timeout: 60
 
 # Credentials for your image registry
 registry:
