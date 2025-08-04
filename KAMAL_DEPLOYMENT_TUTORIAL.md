@@ -14,14 +14,14 @@ This tutorial demonstrates how to deploy a Rails 8 application to AWS EC2 using 
 - Configuring Kamal for production deployment
 - Managing secrets and environment variables
 - Zero-downtime deployments with Kamal
-- SSL certificate setup with Let's Encrypt
 - Best practices for production Rails deployment
+- How to add SSL certificates later (optional)
 
 ## AWS Free Tier Resources We'll Use
 - **EC2 t2.micro instance** (750 hours/month free)
 - **Elastic IP** (1 free when associated with running instance)
 - **Security Groups** (free)
-- **Route 53** (hosted zone - $0.50/month, but we'll use a subdomain)
+- **Route 53** (not needed for this tutorial - we'll use IP address)
 
 ## Step 1: Prepare the Rails Application
 
@@ -66,26 +66,19 @@ HTTPS       TCP         443          0.0.0.0/0
 ```bash
 ssh -i your-key.pem ubuntu@your-ec2-ip
 ```
+*Replace with your actual key file and EC2 IP address*
 
 ### 3.2 Install Docker on Ubuntu
 ```bash
-# Update system
 sudo apt update && sudo apt upgrade -y
-
-# Install Docker
 curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
-
-# Add ubuntu user to docker group
 sudo usermod -aG docker ubuntu
-
-# Start and enable Docker
 sudo systemctl start docker
 sudo systemctl enable docker
-
-# Verify installation
 docker --version
 ```
+*These commands update the system, install Docker, add user to docker group, start Docker, and verify installation*
 
 ### 3.3 Install Docker Compose (if needed)
 ```bash
@@ -106,9 +99,10 @@ servers:
   web:
     - YOUR_EC2_ELASTIC_IP
 
-proxy:
-  ssl: true
-  host: your-domain.com  # or subdomain
+# Note: SSL disabled for simplicity - access via IP address
+# proxy:
+#   ssl: true
+#   host: your-domain.com
 
 registry:
   username: your-dockerhub-username
@@ -125,65 +119,66 @@ env:
 
 ### 4.2 Set Up Secrets
 ```bash
-# Create secrets directory
 mkdir -p .kamal
-
-# Create secrets file
 touch .kamal/secrets
 ```
+*Creates the secrets directory and file*
 
 ## Step 5: Docker Registry Setup
 
 ### 5.1 Docker Hub (Free Option)
 1. Create Docker Hub account
-2. Create repository: `your-username/weather`
+2. Create repository: `your-username/rails-weather-app`
 3. Generate access token for Kamal
 
 ### 5.2 Alternative: AWS ECR (Free Tier: 500MB storage)
 ```bash
-# Create ECR repository
-aws ecr create-repository --repository-name weather --region us-east-1
+aws ecr create-repository --repository-name rails-weather-app --region YOUR_AWS_REGION
 ```
+*Replace YOUR_AWS_REGION with your AWS region (e.g., us-east-1, us-west-2, eu-west-1)*
 
 ## Step 6: Deployment Process
 
 ### 6.1 Initial Setup
 ```bash
-# Setup Kamal on the server
 bin/kamal setup
 ```
+*Sets up Kamal on the server*
 
 ### 6.2 Deploy Application
 ```bash
-# Deploy the application
 bin/kamal deploy
 ```
+*Deploys the application*
 
 ### 6.3 Verify Deployment
 ```bash
-# Check application status
 bin/kamal app logs
 bin/kamal app exec "bin/rails runner 'puts Rails.env'"
 ```
+*Check application logs and verify Rails environment*
 
-## Step 7: SSL Certificate with Let's Encrypt
+## Step 7: Access Your Application
 
-Kamal automatically handles SSL certificates via Let's Encrypt when `ssl: true` is configured.
+With SSL disabled for simplicity, access your application at:
+```
+http://YOUR_EC2_ELASTIC_IP
+```
+
+### Adding SSL Later (Optional)
+To add SSL certificates later:
+1. Purchase a domain name
+2. Point it to your Elastic IP
+3. Update `config/deploy.yml` with SSL configuration
+4. Redeploy with `bin/kamal deploy`
 
 ## Step 8: Monitoring and Maintenance
 
 ### 8.1 Useful Kamal Commands
 ```bash
-# View logs
 bin/kamal app logs -f
-
-# Execute commands on server
 bin/kamal app exec "bin/rails console"
-
-# Rollback deployment
 bin/kamal rollback
-
-# Check server status
 bin/kamal server status
 ```
 
@@ -203,22 +198,18 @@ Kamal includes built-in health checks at `/up` endpoint.
 
 ### Docker Permission Issues
 ```bash
-# On EC2 instance
 sudo usermod -aG docker ubuntu
-# Logout and login again
 ```
+*Run on EC2 instance, then logout and login again*
 
-### SSL Certificate Issues
-- Ensure domain points to your EC2 IP
-- Check security group allows ports 80 and 443
-- Verify Let's Encrypt rate limits
+### Connection Issues
+- Verify security group allows port 80 (HTTP)
+- Check Elastic IP is correctly associated
+- Ensure application is running with `bin/kamal app logs`
 
 ### Deployment Failures
 ```bash
-# Check Kamal logs
 bin/kamal app logs
-
-# Verify server connectivity
 bin/kamal server status
 ```
 
