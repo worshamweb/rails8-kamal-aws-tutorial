@@ -9,32 +9,34 @@ cd # AWS EC2 Setup Guide for Rails 8 + Kamal Deployment
 ## Step 1: AWS EC2 Instance Setup
 
 ### 1.1 Launch EC2 Instance
-1. **Go to AWS Console** → EC2 → Launch Instance
-2. **Name**: `rails-weather-app`
-3. **AMI**: Ubuntu Server 22.04 LTS (Free tier eligible)
+1. **Go to AWS Console** → EC2 → **Launch Instance** (orange button in upper right)
+2. **Name** (in "Name and tags" section): `rails-weather-app`
+3. **Select the Ubuntu Free Tier AMI** under "Application and OS Images (Amazon Machine Image)":
+   - Choose: Ubuntu Server 22.04 LTS (Free tier eligible)
    - *Note: While Amazon Linux 2023 is the default, we use Ubuntu because it's more familiar to most Rails developers and widely used in the Rails community*
-4. **Instance Type**: t2.micro (Free tier eligible)
+4. **Verify the Instance type** is: t2.micro (Free tier eligible)
 5. **Key Pair**: Create new or select existing
    - **If creating new:**
      - Name: `rails-weather-app-key`
      - Type: **ED25519** (more secure than RSA)
      - Format: **.pem** (for Mac/Linux/WSL)
      - **Important**: Download and save the .pem file securely - you cannot download it again
-     - **Secure the key file (run on your local machine):**
+     - **Secure the key file (run on your LOCAL machine):**
        ```bash
-       mkdir -p ~/.ssh
+       mkdir -p ~/.ssh  # Create .ssh directory in user's home dir if it doesn't already exist
        mv ~/Downloads/rails-weather-app-key.pem ~/.ssh/
        chmod 400 ~/.ssh/rails-weather-app-key.pem
        ```
-       *These commands create the .ssh directory, move the key file, and set secure permissions*
+       *These commands create the .ssh directory (if needed), move the key file, and set secure permissions*
      - **Note**: On Windows, use WSL (Windows Subsystem for Linux) or Git Bash for these commands
-6. **Security Group**: Configure network access rules:
+6. **Configure Security Group Settings** under "Network settings":
    - **"Allow SSH traffic from"**: Keep checked (default), change dropdown from "Anywhere" to **"My IP"** for better security
-   - **"Allow HTTP traffic from the internet"**: **Check this box** (needed for web traffic)
-   - *Note: You'll see a warning about 0.0.0.0/0 access for HTTP - this is expected for a public web server.*
+   - **Do NOT check** "Allow HTTPS traffic from the internet" (we won't be adding SSL certificates in this tutorial)
+   - **Check** "Allow HTTP traffic from the internet" (we will need this to allow web traffic to the website)
+   - *Note: You'll see a warning "Rules with source of 0.0.0.0/0 allow all IP addresses to access your instance. We recommend setting security group rules to allow access from known IP addresses only." - this is expected for a public web server.*
 
-7. **Storage**: 8GB gp3 (Free tier: up to 30GB)
-8. **Launch Instance**
+7. **Configure storage** to be 8GB gp3 (Free tier: up to 30GB)
+8. **Launch Instance** (orange button at the bottom of the "Summary" panel on the right)
 
 ### 1.2 Allocate Elastic IP (Recommended)
 
@@ -46,33 +48,38 @@ By default, EC2 instances get a new public IP address every time they restart, w
 4. **Click "Allocate"** to create the IP address
 5. **Select the new Elastic IP** by checking its box
 6. **Click "Actions"** menu → **"Associate Elastic IP address"**
-7. **Verify settings on Associate page:**
-   - Resource type: **Instance** (should be default)
-   - Instance: Select **rails-weather-app** from dropdown
+7. **On the "Associate Elastic IP address" page:**
+   - Confirm the **Resource type is Instance** (should be default)
+   - Select your newly created **rails-weather-app** in the "Instance" combo box
 8. **Click "Associate"**
-9. **Note the Elastic IP address** for Kamal configuration (found under "Allocated IPv4 address" column in the Elastic IP addresses console)
+9. **IMPORTANT: Note the Elastic IP address** for Kamal configuration (found under "Allocated IPv4 address" column in the Elastic IP addresses console) - we will reference this throughout the tutorial as YOUR_ELASTIC_EC2_IP
 
 *Note: Elastic IPs are free when associated with a running instance (within your EC2 Free Tier hours), but cost $0.005/hour if unassociated or if your Free Tier expires.*
 
 ### 1.3 Connect to Instance
-**Run on your local machine:**
+**Test the connection (run on your LOCAL machine):**
 ```bash
 ssh -i ~/.ssh/rails-weather-app-key.pem ubuntu@YOUR_ELASTIC_EC2_IP
 ```
-*Replace YOUR_ELASTIC_EC2_IP with your actual Elastic IP address*
+*Replace YOUR_ELASTIC_EC2_IP with your actual Elastic IP address.*
+
+*If you have successfully connected, you should see a message saying "Welcome to Ubuntu..." and there should be some "System information" listed. If you see this, you have successfully connected, and can now exit out of this ssh shell with the exit command:*
+
+```bash
+exit
+```
 
 ### 1.4 Run Setup Script
-**Copy the setup script to your instance (run on your local machine):**
+**Copy the setup script to your instance (run on your LOCAL machine):**
 ```bash
 scp -i ~/.ssh/rails-weather-app-key.pem scripts/aws-ec2-setup.sh ubuntu@YOUR_ELASTIC_EC2_IP:~/
 ```
 
-**Connect to EC2 and run the setup script (run on your local machine to connect, then commands execute on EC2):**
+**Now we need to connect to the REMOTE EC2 INSTANCE using ssh. Running this ssh command in your LOCAL machine terminal will open up an ssh instance on the REMOTE EC2 instance. Going forward you should probably have 2 terminals open. The terminal this command is run in will be used to execute commands on the REMOTE EC2 instance, and a separate terminal for running LOCAL commands:**
 ```bash
 ssh -i ~/.ssh/rails-weather-app-key.pem ubuntu@YOUR_ELASTIC_EC2_IP
-chmod +x aws-ec2-setup.sh
-./aws-ec2-setup.sh
-exit
+chmod +x aws-ec2-setup.sh  # Make the setup script executable
+./aws-ec2-setup.sh         # Run the setup script
 ```
 
 **What the setup script does (this will take 3-5 minutes):**
@@ -84,21 +91,25 @@ exit
 
 *You'll see lots of output scrolling by - this is normal! The script will show "Reading package lists...", "Setting up...", and similar messages. Wait for it to complete and return you to the command prompt before proceeding.*
 
-**Reconnect and test Docker (run on your local machine to connect, then commands execute on EC2):**
+**Let's test Docker on the EC2 instance. Run the following command in the SSH terminal:**
 ```bash
-ssh -i ~/.ssh/rails-weather-app-key.pem ubuntu@YOUR_ELASTIC_EC2_IP
 docker run hello-world
 ```
 *Note: You need to logout and login again for Docker group changes to take effect*
 
 **If you get "permission denied" error:**
-This means the Docker group changes haven't taken effect yet. Run these commands while connected to your EC2 instance:
+This means the Docker group changes haven't taken effect yet. Run these commands in the SSH terminal connected to the EC2 instance:
 ```bash
 sudo usermod -aG docker ubuntu
 newgrp docker
-docker run hello-world
 ```
 *The `newgrp docker` command applies the group change without requiring a full logout/login*
+
+**Now let's test Docker again:**
+```bash
+docker run hello-world
+```
+*There will probably be quite a bit of output, but near the top if successful, you should see "Hello from Docker! This message shows that your installation appears to be working correctly."*
 
 ## Step 2: Docker Registry Setup
 
@@ -106,20 +117,21 @@ AWS Elastic Container Registry (ECR) is a secure, managed Docker registry servic
 
 ### Option A: AWS ECR (Recommended - Best Practice)
 
-**Important: All commands in this section should be run in a terminal on your local machine, not in the SSH session with your EC2 instance.**
+**Important: All commands in this section are running commands on your LOCAL machine. They should be run in a SEPARATE terminal on your LOCAL machine, NOT in the SSH session connected to your EC2 instance.**
 
-**Find your AWS region and account ID (run on your local machine):**
+**Find your AWS region and account ID (run on your LOCAL machine):**
 ```bash
 aws configure get region
 aws sts get-caller-identity --query Account --output text
 ```
+*IMPORTANT: Copy these values somewhere as we will be referencing them repeatedly throughout the tutorial as YOUR_AWS_REGION and YOUR_ACCOUNT_ID.*
 
-**Create ECR repository (run on your local machine):**
+**Create ECR repository (run on your LOCAL machine):**
 ```bash
 aws ecr create-repository --repository-name rails-weather-app --region YOUR_AWS_REGION
 ```
 
-**Get login token (run on your local machine):**
+**Get login token (run on your LOCAL machine):**
 ```bash
 aws ecr get-login-password --region YOUR_AWS_REGION | docker login --username AWS --password-stdin YOUR_ACCOUNT_ID.dkr.ecr.YOUR_AWS_REGION.amazonaws.com
 ```
@@ -138,10 +150,10 @@ aws ecr get-login-password --region YOUR_AWS_REGION | docker login --username AW
 
 ## Step 3: Prepare Rails App for Deployment
 
-**Important: All commands in this section should be run on your local machine in the Rails project directory, NOT in the SSH session with your EC2 instance.**
+**Important: All commands in this section should be run on your LOCAL machine in the Rails project directory, NOT in the SSH session with your EC2 instance.**
 
 ### 3.1 Fix Common File Permission and Directory Issues
-**Run on your local machine in the Rails project directory:**
+**Run on your LOCAL machine in the Rails project directory:**
 ```bash
 mkdir -p log storage
 touch log/.keep storage/.keep
@@ -153,18 +165,12 @@ chmod +x bin/docker-entrypoint bin/kamal bin/thrust bin/rails bin/rake bin/setup
 - Adds `.keep` files so Git tracks empty directories
 - Makes all Rails executable scripts executable (docker-entrypoint, kamal, thrust, rails, rake, setup)
 
-**Commit these changes:**
-```bash
-git add log/.keep storage/.keep bin/
-git commit -m "Prepare app for Kamal deployment"
-```
-
 ## Step 4: Local Configuration
 
-**Important: All commands in this section should be run on your local machine in the Rails project directory, NOT in the SSH session with your EC2 instance.**
+**Important: All commands in this section should be run on your LOCAL machine in the Rails project directory, NOT in the SSH session with your EC2 instance.**
 
 ### 4.1 Update Kamal Configuration
-**Copy the production template to create your deployment configuration (run on your local machine in the Rails project directory):**
+**Copy the production template to create your deployment configuration (run on your LOCAL machine in the Rails project directory):**
 ```bash
 cp config/deploy.production.yml config/deploy.yml
 ```
@@ -211,7 +217,7 @@ This tutorial's Kamal configuration includes several customizations beyond the d
 4. Configure registry settings for your chosen Docker registry
 
 ### 4.2 Configure Secrets
-**Copy the secrets template to create your secrets configuration (run on your local machine in the Rails project directory):**
+**Copy the secrets template to create your secrets configuration (run on your LOCAL machine in the Rails project directory):**
 ```bash
 cp .kamal/secrets.example .kamal/secrets
 ```
@@ -219,7 +225,7 @@ cp .kamal/secrets.example .kamal/secrets
 **Then edit the newly created `.kamal/secrets` file by replacing the placeholder values:**
 - Replace `your_rails_master_key_here` with the contents of `config/master.key`
 - Replace `your_registry_password_here` with:
-  - **For ECR (recommended):** Get your login token by running on your local machine: `aws ecr get-login-password --region YOUR_AWS_REGION`
+  - **For ECR (recommended):** Get your login token by running on your LOCAL machine: `aws ecr get-login-password --region YOUR_AWS_REGION`
   - **For Docker Hub:** Use your access token from hub.docker.com (Account Settings → Security → New Access Token)
 
 **What is the Rails Master Key?**
@@ -228,7 +234,7 @@ The Rails Master Key encrypts your application's credentials and secrets. It's a
 *Note: We copy the template file `secrets.example` to create `secrets`, which is the file Kamal actually uses for sensitive configuration. You'll be editing `.kamal/secrets`, not the template file.*
 
 ### 3.3 Add to .gitignore
-**Run on your local machine in the Rails project directory:**
+**Run on your LOCAL machine in the Rails project directory:**
 ```bash
 echo ".kamal/secrets" >> .gitignore
 ```
@@ -244,18 +250,11 @@ The `.gitignore` file tells Git which files and directories to ignore when commi
 
 ## Step 5: Initial Deployment
 
-**Important: All commands in this section should be run on your local machine in the Rails project directory, NOT in the SSH session with your EC2 instance.**
+**Important: All commands in this section should be run on your LOCAL machine in the Rails project directory, NOT in the SSH session with your EC2 instance.**
 
 ### 5.1 Setup Kamal on Server
-**Run on your local machine in the Rails project directory:**
+**Run on your LOCAL machine in the Rails project directory:**
 ```bash
-bin/kamal setup
-```
-
-**If you get "Permission denied" error:**
-The Kamal executable might not have execute permissions. Fix this by running:
-```bash
-chmod +x bin/kamal
 bin/kamal setup
 ```
 
@@ -276,7 +275,7 @@ bin/kamal setup
 *This is a one-time setup process that prepares your server for Kamal deployments*
 
 ### 5.2 Deploy Application
-**Run on your local machine in the Rails project directory:**
+**Run on your LOCAL machine in the Rails project directory:**
 ```bash
 bin/kamal deploy
 ```
@@ -291,14 +290,18 @@ bin/kamal deploy
 
 *This process typically takes 2-5 minutes depending on your application size and internet speed*
 
+
+
 ### 5.3 Verify Deployment
-**Run on your local machine in the Rails project directory:**
+**Run on your LOCAL machine in the Rails project directory:**
 ```bash
 bin/kamal app logs
 bin/kamal app details
 curl -I http://YOUR_ELASTIC_EC2_IP
 ```
 *These commands check logs, status, and test the application*
+
+If the curl test is successful, you should see "HTTP/1.1 200 OK" accompanied by the HTTP headers.
 
 
 
@@ -438,7 +441,7 @@ docker stderr: permission denied while trying to connect to the Docker daemon so
 **Local Docker permission denied:**
 Your local user needs Docker access to build images.
 
-**Run on your local machine:**
+**Run on your LOCAL machine:**
 ```bash
 sudo usermod -aG docker $USER
 newgrp docker
@@ -466,9 +469,9 @@ ERROR (SSHKit::Command::Failed): Authentication failed for user ubuntu@YOUR_IP
 **Problem:** Kamal can't connect to your EC2 instance
 **Solutions:**
 - Verify SSH key path in `config/deploy.yml`
-- Test manual connection from your local machine:
+- Test manual connection from your LOCAL machine:
   
-  **Run on your local machine:**
+  **Run on your LOCAL machine:**
   ```bash
   ssh -i ~/.ssh/rails-weather-app-key.pem ubuntu@YOUR_ELASTIC_EC2_IP
   ```
@@ -508,14 +511,14 @@ image: YOUR_ACCOUNT_ID.dkr.ecr.YOUR_AWS_REGION.amazonaws.com/rails-weather-app
 
 **Verify ECR repository exists:**
 
-**Run on your local machine:**
+**Run on your LOCAL machine:**
 ```bash
 aws ecr describe-repositories --repository-names rails-weather-app --region YOUR_AWS_REGION
 ```
 
 **For ECR - refresh login token (tokens expire after 12 hours):**
 
-**Run on your local machine:**
+**Run on your LOCAL machine:**
 ```bash
 aws ecr get-login-password --region YOUR_AWS_REGION | docker login --username AWS --password-stdin YOUR_ACCOUNT_ID.dkr.ecr.YOUR_AWS_REGION.amazonaws.com
 ```
@@ -528,7 +531,7 @@ Copy the output and replace `KAMAL_REGISTRY_PASSWORD` in `.kamal/secrets`
 
 **For Docker Hub - verify login:**
 
-**Run on your local machine:**
+**Run on your LOCAL machine:**
 ```bash
 docker login
 ```
@@ -549,7 +552,7 @@ ERROR: failed to build: process did not complete successfully: exit code 1
 **Problem:** Rails app missing required directories for Docker build
 **Solution:** Create missing directories in your Rails app
 
-**Run on your local machine:**
+**Run on your LOCAL machine:**
 ```bash
 mkdir -p log storage
 touch log/.keep storage/.keep
@@ -568,7 +571,7 @@ exec: "/rails/bin/docker-entrypoint": permission denied
 **Problem:** Docker entrypoint script lacks execute permissions
 **Solution:** Fix entrypoint permissions in Dockerfile
 
-**Run on your local machine:**
+**Run on your LOCAL machine:**
 ```bash
 chmod +x bin/docker-entrypoint
 git add bin/docker-entrypoint
@@ -593,7 +596,7 @@ docker stderr: Error: target failed to become healthy within configured timeout 
 
 **Check what's happening:**
 
-**Run on your local machine:**
+**Run on your LOCAL machine:**
 ```bash
 bin/kamal app logs --lines 50
 ```
@@ -614,7 +617,7 @@ proxy:
 
 **Note:** If you've already deployed and are changing the timeout, you may need to restart the proxy:
 
-**Run on your local machine:**
+**Run on your LOCAL machine:**
 ```bash
 bin/kamal proxy restart
 bin/kamal deploy
@@ -638,7 +641,7 @@ ERROR: Container rails-weather-app-web-latest exited with status 1
 
 **Deployment failures:**
 
-**Run on your local machine:**
+**Run on your LOCAL machine:**
 ```bash
 bin/kamal app logs --lines 100
 bin/kamal server status

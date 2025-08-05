@@ -12,7 +12,7 @@ image: rails-weather-app
 # Deploy to these servers - UPDATE WITH YOUR EC2 ELASTIC IP
 servers:
   web:
-    - 3.18.35.126
+    - 3.130.124.19
     # Example: - 54.123.456.789
 
 # Proxy configuration (SSL disabled - requires domain name)
@@ -22,8 +22,13 @@ servers:
 
 # Credentials for your image registry
 registry:
-  # For ECR (recommended): Use "AWS" as username
-  # For Docker Hub: Use your Docker Hub username
+  # For ECR: Specify the ECR server, use "AWS" as username
+  # server: YOUR_ACCOUNT_ID.dkr.ecr.YOUR_AWS_REGION.amazonaws.com
+  # username: AWS
+  
+  # For Docker Hub: Comment out server line, use your Docker Hub username
+  # username: YOUR_DOCKERHUB_USERNAME
+  
   server: 011528294573.dkr.ecr.us-east-1.amazonaws.com
   username: AWS
   
@@ -84,3 +89,4 @@ ssh:
 
 # Health check is handled automatically by Kamal
 # Proxy configuration is managed by Kamal's built-in proxy
+
