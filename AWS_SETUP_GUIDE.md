@@ -1,4 +1,4 @@
-# AWS EC2 Setup Guide for Rails 8 + Kamal Deployment
+cd # AWS EC2 Setup Guide for Rails 8 + Kamal Deployment
 
 ## Prerequisites Checklist
 - [ ] AWS Account with Free Tier access
