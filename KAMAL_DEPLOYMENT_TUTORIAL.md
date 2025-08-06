@@ -15,7 +15,7 @@ This tutorial demonstrates how to deploy a Rails 8 application to AWS EC2 using 
 - Managing secrets and environment variables
 - Zero-downtime deployments with Kamal
 - Best practices for production Rails deployment
-- How to add SSL certificates later (optional)
+- HTTP deployment with optional SSL upgrade path
 
 ## AWS Free Tier Resources We'll Use
 - **EC2 t2.micro instance** (750 hours/month free)
@@ -47,14 +47,13 @@ servers:
 1. **Instance Type**: t2.micro (Free Tier eligible)
 2. **AMI**: Ubuntu Server 22.04 LTS
 3. **Storage**: 8GB gp2 (Free Tier includes 30GB)
-4. **Security Group**: Configure ports 22 (SSH), 80 (HTTP), 443 (HTTPS)
+4. **Security Group**: Configure ports 22 (SSH), 80 (HTTP)
 
 ### 2.2 Security Group Configuration
 ```
 Type        Protocol    Port Range    Source
-SSH         TCP         22           Your IP/0.0.0.0/0
+SSH         TCP         22           Your IP
 HTTP        TCP         80           0.0.0.0/0
-HTTPS       TCP         443          0.0.0.0/0
 ```
 
 ### 2.3 Elastic IP (Optional but Recommended)
@@ -99,10 +98,8 @@ servers:
   web:
     - YOUR_EC2_ELASTIC_IP
 
-# Note: SSL disabled for simplicity - access via IP address
-# proxy:
-#   ssl: true
-#   host: your-domain.com
+# HTTP deployment - no SSL configuration needed
+# For SSL later: add domain name and enable proxy configuration
 
 registry:
   username: your-dockerhub-username
@@ -160,17 +157,18 @@ bin/kamal app exec "bin/rails runner 'puts Rails.env'"
 
 ## Step 7: Access Your Application
 
-With SSL disabled for simplicity, access your application at:
+Access your application at:
 ```
 http://YOUR_EC2_ELASTIC_IP
 ```
 
 ### Adding SSL Later (Optional)
-To add SSL certificates later:
+For production SSL setup:
 1. Purchase a domain name
 2. Point it to your Elastic IP
-3. Update `config/deploy.yml` with SSL configuration
-4. Redeploy with `bin/kamal deploy`
+3. Update security group to allow HTTPS (port 443)
+4. Update `config/deploy.yml` with SSL configuration
+5. Redeploy with `bin/kamal deploy`
 
 ## Step 8: Monitoring and Maintenance
 
@@ -190,7 +188,7 @@ Kamal includes built-in health checks at `/up` endpoint.
 1. **Security**: Proper security group configuration
 2. **Secrets Management**: Environment variables stored securely
 3. **Zero Downtime**: Kamal's rolling deployment strategy
-4. **SSL/TLS**: Automatic certificate management
+4. **HTTP Deployment**: Production-ready setup
 5. **Monitoring**: Built-in health checks and logging
 6. **Cost Optimization**: Using AWS Free Tier resources
 
@@ -203,7 +201,7 @@ sudo usermod -aG docker ubuntu
 *Run on EC2 instance, then logout and login again*
 
 ### Connection Issues
-- Verify security group allows port 80 (HTTP)
+- Verify security group allows port 80 (HTTP) from 0.0.0.0/0
 - Check Elastic IP is correctly associated
 - Ensure application is running with `bin/kamal app logs`
 
@@ -217,7 +215,7 @@ bin/kamal server status
 - **EC2 t2.micro**: Free (750 hours/month)
 - **Storage**: Free (up to 30GB)
 - **Data Transfer**: Free (up to 15GB/month)
-- **Elastic IP**: Free (when associated)
+- **Elastic IP**: Free (1 IP when associated with running instance)
 
 **Estimated Monthly Cost**: $0 (within Free Tier limits)
 

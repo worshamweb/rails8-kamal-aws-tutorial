@@ -1,6 +1,6 @@
 # Rails 8 + Kamal + AWS EC2 Deployment Tutorial
 
-> **Complete guide to deploying a Rails 8 application to AWS EC2 using Kamal with zero-downtime deployments, SSL certificates, and AWS Free Tier optimization.**
+> **Complete guide to deploying a Rails 8 application to AWS EC2 using Kamal with zero-downtime deployments and AWS Free Tier optimization.**
 
 ## Tutorial Overview
 
@@ -13,7 +13,7 @@ This repository contains a complete tutorial for deploying a Rails 8 weather app
 - Configuring Kamal for zero-downtime deployments
 - Managing secrets and environment variables securely
 - Docker containerization best practices
-- Automatic SSL certificate management with Let's Encrypt
+- HTTP deployment (SSL setup covered as optional enhancement)
 - Production monitoring and troubleshooting
 - Cost optimization with AWS Free Tier
 
@@ -28,7 +28,7 @@ This repository contains a complete tutorial for deploying a Rails 8 weather app
 - **Docker Hub account (free)** - [Create account at hub.docker.com](https://hub.docker.com/) (needed to store your app's container images)
 
 **Optional:**
-- **Domain name** - For SSL certificates and custom URLs (you can deploy to IP address initially)
+- **Domain name** - For custom URLs and future SSL setup (tutorial uses IP address)
 
 **Verify Prerequisites:**
 ```bash
@@ -92,20 +92,20 @@ rails8-kamal-aws-tutorial/
 
 | Resource | Free Tier Limit | Monthly Cost |
 |----------|----------------|--------------|
-| EC2 t2.micro | 750 hours | **$0** |
+| EC2 t2.micro | 750 hours/month | **$0** |
 | EBS Storage | 30GB | **$0** |
 | Data Transfer | 15GB out | **$0** |
-| Elastic IP | 1 IP (when associated) | **$0** |
+| Elastic IP | 1 IP (when associated with running instance) | **$0** |
 | **Total** | | **$0** |
 
 ## Key Features Demonstrated
 
 ### Kamal Configuration
 - Zero-downtime deployments
-- Automatic SSL with Let's Encrypt
 - Health checks and monitoring
 - Asset bridging between deployments
 - Docker image optimization
+- HTTP deployment with optional SSL upgrade path
 
 ### AWS Best Practices
 - Security group configuration
@@ -154,7 +154,6 @@ bin/kamal shell
 
 ### Common Issues
 - **Docker permission errors**: Ensure user is in docker group
-- **SSL certificate issues**: Verify domain DNS and security groups
 - **Memory issues on t2.micro**: Monitor usage and optimize Rails
 - **Deployment failures**: Check logs with `bin/kamal app logs`
 
@@ -170,7 +169,7 @@ After completing this tutorial, you'll understand:
 - **Kamal fundamentals**: Configuration, deployment, and management
 - **AWS EC2 deployment**: Best practices for Rails applications
 - **Docker containerization**: Production-ready container setup
-- **SSL/TLS management**: Automatic certificate handling
+- **HTTP deployment**: Production-ready setup with optional SSL upgrade path
 - **Cost optimization**: Maximizing AWS Free Tier benefits
 - **Production monitoring**: Health checks and logging
 - **Security practices**: Secrets management and server hardening
